@@ -1,0 +1,415 @@
+
+\documentclass[11pt]{article}
+\usepackage[a4paper, margin=2cm]{geometry}
+\usepackage{minted}
+\usepackage[parfill]{parskip}  
+%\parindent0pt
+%\parskip1ex
+
+%\usepackage{helvet}
+%\renewcommand{\familydefault}{\sfdefault}
+
+\usepackage{newunicodechar}
+\newunicodechar{ä}{\"a}
+\newunicodechar{ü}{\"u}
+\newunicodechar{ö}{\"o}
+\newunicodechar{Ä}{\"A}
+\newunicodechar{Ü}{\"U}
+\newunicodechar{Ö}{\"O}
+\newunicodechar{ß}{\ss}
+\newunicodechar{λ}{\ensuremath{\lambda}}
+\newunicodechar{θ}{\ensuremath{\theta}}
+
+
+\input{preamble.tex}
+
+\title{Gaussian conditional distributions}
+\author{Moritz Schauer}%, collaborators?}
+\date{\today}
+
+
+
+
+\RequirePackage[backend=biber,style=authoryear,sorting=ydnt,maxnames=4,url=false,natbib]{biblatex}
+\DeclareNameAlias{sortname}{last-first}
+\addbibresource{research.bib}
+\newcommand{\citeauthorandyear}[2][]{
+   \citeauthor{#2} (\citeyear[#1]{#2})
+}
+\newcommand{\on}[1]{\operatorname{#1}}
+
+%%%%%%%%%%%%%%%%%%%%%%5
+\begin{document}
+
+\maketitle
+
+\section{Notation}
+For matrix division  write $(A)^{-1}B = A\backslash B$ ($\backslash$ is right associative),
+$AB^{-1} = A/B$ (here $\backslash$ is left associative, following the convention for division operators, not as in Julia for example). $\|\cdot\|$ is the 2-norm and $|\cdot |$ the determinant.
+
+
+
+\section{Gaussian random variables}
+The isotropic Gaussian distribution in a d-dimensional Euclidean space has density  $\phi(x) = (2\pi)^{\frac{-d}{2}}\exp(-\frac12\|x\|^2).$
+
+
+
+Let $\mu \in \RR^d$, $\Sigma$ $d\times d$ positive semi-definite.
+Then
+\[
+X \sim N(\mu, \Sigma)
+\]
+if and only if there is an isotrophic Gaussian random variable $Z$ such that $X = BZ + \mu$ for a matrix $B$ (which then fulfills $BB'= \Sigma$.) If $\Sigma$ is positive definite, $X$ has density
+\[
+\phi(x; \mu, \Sigma) = (2\pi)^{-\frac{d}{2}}|\Sigma|^{-\frac12}\exp(-\frac12 (x-\mu)'(\Sigma)^{-1} (x-\mu)).
+\]
+
+Then for $a \in \RR^d$, $A \in \RR^{m, d}$,
+\[
+a + A X \sim N(a + A \mu, A \Sigma A').
+\]
+If $X \sim N(0, \Sigma_x)$ and $Y \sim N(0, \Sigma_y)$ independent of same dimension, then 
+\[
+X + Y \sim N(0, \Sigma_x + \Sigma_y). 
+\]
+\section{Cholesky factorization}
+ 
+The Cholesky factorization $\Sigma = L L'$ or any square root factorization $\Sigma = AA'$ can be used to sample from $
+ N(\mu, \Sigma).$
+If  $Z \sim N(0, I)$ then
+\[
+\mu + L Z \sim N(\mu, \Sigma)
+\]
+and $\mu + A Z \sim N(\mu, \Sigma)$.
+
+The particular interest for triangular factors $L$ of $\Sigma$ is that they give a causal interpretation to the dependence structure. If for example for a two dimensional 
+$
+\begin{bmatrix}
+X\\Y\end{bmatrix}\sim N(\mu, LL')$
+with
+\[
+L = \begin{bmatrix}l_{x} & 0 \\l_{yx}  &l_{y} \end{bmatrix}
+\]
+Then for $Z_x, Z_y \sim N(0,1)$,
+\begin{align*}
+X \quad &\sim \quad  \mu_x + l_{x} Z_x\\
+Y \quad &\sim \quad \mu_y + l_{y} Z_y + l_{yx} Z_x = \mu_y + l_{y} Z_y + l_{yx}( l_{x})^{-1}(Y - \mu_x)
+\intertext{and}
+Y \mid X = x \quad &\sim \quad \mu_y + l_{y} Z_y + l_{yx}( l_{x})^{-1}(x - \mu_x).
+\end{align*}
+Note that $\dfrac{l_{yx}}{l_{y}} = \dfrac{l_yl_{yx}}{l_{y}^2} = \dfrac{\operatorname{Cov}(X,Y)}{\operatorname{Var}(Y)}$.
+Note that the covariance $\Sigma$ does not readily imply any order here, one can apply the Cholesky decomposition to $P A P'$ where $P$ is any permutation matrix (exactly one entry of 1 in each row and each column and 0 elsewhere.)  $Z_x$ and $Z_y$ are the \emph{innovations}.
+
+
+If the Cholesky factorization of the precision matrix $\Sigma^{-1} = \bar L \bar L'$ is available,
+then
+\[
+\mu + \bar L'\backslash Z 
+\]
+can be equally used to sample from $ N(\mu, \Sigma)$ (it can be computed efficiently by back-substitution.)
+
+
+
+Note that if $\Sigma = A A'$ with $A$ non-triangular, then the LQ (transposed QR) decomposition of A, 
+\[
+A = L Q
+\]
+with $L$ lower triangular and $Q$ orthonormal, gives the Cholesky factorization
+\[
+\Sigma = AA' = L Q Q' L' = LL'.
+\]
+This is the preferable way to compute $L$ if $A$ is available.
+
+Further for $\Sigma = A_1A_1' + A_2A_2'$
+\[
+\begin{bmatrix} A_1 \; A_2\end{bmatrix} = L Q
+\]
+gives
+\[
+LL' = LQQ'L = \begin{bmatrix} A_1 
+\;A_2\end{bmatrix} \begin{bmatrix} A_1'\\ A_2'\end{bmatrix} = A_1A_1' + A_2A_2' =\Sigma.
+\]
+
+
+
+
+\section{Block matrices and divide and conquer}
+Let $ (X,Y) \sim N(\mu, \Sigma)$, written in block form as
+\[
+\mu = \begin{bmatrix}\mu_x\\ \mu_y\end{bmatrix}, \quad \Sigma = \begin{bmatrix}\Sigma_{x} & \Sigma_{xy} \\ \Sigma_{xy}' &\Sigma_{y} \end{bmatrix}.
+\]
+As
+\[
+X \sim N(\mu_x, \Sigma_x), \quad Y \sim N(\mu_y, \Sigma_y)
+\]
+the mean and covariance parametrization lends itself to find the law of subvectors, or more generally, linear transformations.
+
+
+Then the precision is given by the block matrix inversion formula
+\[
+\Sigma^{-1} = \Gamma = 
+\begin{bmatrix}\Gamma_{x} & \Gamma_{xy} \\ \Gamma_{xy}' &\Gamma_{y} \end{bmatrix}
+\]
+with the Schur complement
+\[
+\Gamma_{x}^{-1} = \Sigma_{x} - \Sigma_{xy}(\Sigma_{y})^{-1} \Sigma_{yx}
+\]
+\[
+\Gamma_{xy} = -\Gamma_{x} \Sigma_{xy} / \Sigma_y
+\]
+and
+\[
+\Gamma_{y}^{-1} = \Sigma_{y} - \Sigma_{yx}(\Sigma_{x})^{-1} \Sigma_{xy}
+\]
+Also
+\[
+\Gamma_x = \Sigma_x^{{-1}}+\Sigma_x^{{-1}}\Sigma_{xy}\Gamma_y\Sigma_{yx}\Sigma_x^{{-1}},
+\]
+
+
+
+(see \url{https://www.apps.stat.vt.edu/leman/VTCourses/Precision.pdf}, here $\Sigma_{yx} = \Sigma_{xy}'$.)
+
+The same holds for finding the variance  given the precision.
+In particular,
+\[
+X \sim N(\mu_x, \Sigma_x)
+\]
+\[
+\Sigma_x =  (\Gamma_x - \Gamma_{xy}\Gamma_y^{-1} \Gamma_{yx})^{-1} = \Gamma_x^{{-1}}+\Gamma_x^{{-1}}\Gamma_{xy}\Sigma_y\Gamma_{yx}\Gamma_x^{{-1}},
+\]
+If $\Gamma$ is sparse, then 
+\[
+  \Gamma_{xy}\Gamma_y^{-1} \Gamma_{yx} 
+\]
+can be computed from having the inverse available only for neighbouring coordinates of $x$.
+
+
+\section{Marginal likelihood}
+In the setting of the positive definite block model,
+\[
+\int\phi([x,y]; \mu, \Sigma) d x 
+= (2\pi)^{\tfrac{d_x - d}2}|\Gamma|^{\frac12} |\Gamma_x|^{-\frac12}   \exp\left(\frac12 \mu_{x\mid y}'\Gamma_x \mu_{x\mid y}
+-\frac12[ - \mu_x, y - \mu_y]' \Sigma^{-1}[ - \mu_x, y - \mu_y]
+\right) 
+\]
+\begin{proof}
+
+\[
+(2\pi)^{-\frac{d}2}|\Gamma|^{\frac12} \int \exp\left(-\frac12[x - \mu_x, y - \mu_y]' \Sigma^{-1}[x - \mu_x, y - \mu_y]\right) d x
+\]
+
+\[
+=(2\pi)^{-\frac{d}2}|\Gamma|^{\frac12} w_y\int \exp\left(-\frac12x '\Gamma_x x + x' \Gamma_x (\mu_x - \Gamma_x\backslash \Gamma_{xy}(y - \mu_y))
+\right) d x
+\]
+with $w_y = \exp\left(-\frac12 \mu_x'\Gamma_x \mu_x-\frac12(y - \mu_y)'\Gamma_y(y-\mu_y) + \mu_x' \Gamma_{xy}(y - \mu_y)\right)$
+\[
+= w_y (2\pi)^{\frac{d_x - d}2}|\Gamma|^{\frac12} |\Gamma_x|^{-\frac12}   \exp\left(\frac12 (\mu_x - \Gamma_x\backslash \Gamma_{xy}(y - \mu_y))'\Gamma_x (\mu_x - \Gamma_x\backslash \Gamma_{xy}(y - \mu_y))
+\right)  
+\]
+\[
+= (2\pi)^{\frac{d_x - d}2}|\Gamma|^{\frac12} |\Gamma_x|^{-\frac12}    \exp\left(\frac12 \mu_{x\mid y}'\Gamma_x \mu_{x\mid y}
+-\frac12 \mu_x'\Gamma_x \mu_x-\frac12(y - \mu_y)'\Gamma_y(y-\mu_y) + \mu_x' \Gamma_{xy}(y - \mu_y)
+\right)  
+\]
+\[
+= (2\pi)^{\frac{d_x - d}2}|\Gamma|^{\frac12} |\Gamma_x|^{-\frac12}   \exp\left(\frac12 \mu_{x\mid y}'\Gamma_x \mu_{x\mid y}
+-\frac12[ - \mu_x, y - \mu_y]' \Sigma^{-1}[ - \mu_x, y - \mu_y]
+\right)  
+\]
+\end{proof}
+\section{Inversion}
+
+
+A generative model gives a factorisation of the joint covariance.
+Rearranging $\begin{bmatrix}X\\Y\end{bmatrix}$ to $\begin{bmatrix}Y\\X\end{bmatrix}$ consider a Cholesky factor of  
+\[
+\begin{bmatrix}\Sigma_{y} & \Sigma_{xy} \\ \Sigma_{xy}' &\Sigma_{x} \end{bmatrix}
+= \begin{bmatrix}L_{y} & 0 \\  L_{xy} &L_{x} \end{bmatrix} \begin{bmatrix}L_{y} & 0 \\  L_{xy} &L_{x} \end{bmatrix} '
+\]
+%\begin{bmatrix}L_{x} & L_{xy} \\ 0 &L_{y} \end{bmatrix}'.
+
+The LQ again allows to compute a such factorization with reverted dependency. Indeed 
+\[
+A = \begin{bmatrix}L_{y} & 0 \\  L_{xy} &L_{x} \end{bmatrix}  Q.
+\]
+
+
+ Then from $(X, Y) \sim L Z + \mu$ with and $Z = (Z_x, Z_y)$
+\begin{align*}
+Y \quad &\sim \quad  \mu_y + L_{y} Z_y\\
+X \quad &\sim \quad \mu_x + L_{x} Z_x + L_{xy} Z_y
+\end{align*}
+
+Thus
+\[
+X \mid Y = y \quad \sim \quad \mu_x + L_{x} Z_x + L_{xy} (L_{y}\backslash(y - \mu_y)).
+\]
+
+
+Then $X \mid Y = y$ is distributed as $N(\mu_{x \mid y},\Sigma_{x\mid y})$ where
+\begin{align*}
+\mu_{x \mid y} &= \mu_x + \Sigma_{xy}\Sigma_{y}^{-1}(y - \mu_y)\\
+\Sigma_{x\mid y} &= \Sigma_{x} - \Sigma_{xy}\Sigma_{y}^{-1} \Sigma_{xy}'
+\end{align*}
+where $\Sigma_{xy}\Sigma_{y}^{-1}$ is the matrix of regression coefficients (similar to $\hat y = \beta x$ for $\hat \beta = \frac{s_{xy}}{s_y^2}$ in simple linear regression.)
+Recall 
+\[
+\Gamma_x = \left(\Sigma_{x} - \Sigma_{xy}\Sigma_{y}^{-1} \Sigma_{xy}'\right)^{-1}.
+\]
+So the conditional precision is just the submatrix of the precision matrix. Also
+\[
+\mu_{x \mid y} = \mu_x  -\Gamma_{x}\backslash\Gamma_{xy}(y - \mu_y)
+\]% wrong on stack overflow
+by $ -\Gamma_{x}^{-1}\Gamma_{xy} =\Sigma_{xy} (\Sigma_y)^{-1}$.
+%$\Gamma_{xy} = -\Gamma_{x} \Sigma_{xy} (\Sigma_y)^{-1}$
+
+
+Note \[
+ \Sigma =  \begin{bmatrix}\Sigma_{x} & \Sigma_{xy} \\ \Sigma_{xy}' &\Sigma_{y} \end{bmatrix} =  \begin{bmatrix} L_{x}L_{x}' +  L_{xy}L_{xy}'  & L_{xy}L_{y}' \\ L_{y}L_{xy}'  & L_{y}L_{y}' \end{bmatrix}.
+\] 
+and 
+\[
+ \Sigma_{xy}\Sigma_{y}^{-1} 
+ = L_{xy}L_{y}'(L_{y}L_{y}')^{-1} 
+= L_{xy} L_{y}^{-1}.
+\]
+
+
+%As L_{y}^{-1}(Y - \mu_y) =   Z_y$
+With $Z_y \sim N(0,1)$ and $\Gamma_x = \bar L\bar L'$, 
+\begin{equation}
+\mu_x  -\bar L'\backslash\left(\bar L\backslash\Gamma_{xy}(y - \mu_y) + Z\right) \quad\sim \quad N(\mu_{x \mid y},\Sigma_{x\mid y}) \quad \text{(check sign)}
+\end{equation}
+
+Finally, with an independent sample of $(\tilde X,\tilde Y) \sim N(\mu, \Sigma)$,
+\[
+X \mid Y = y \quad \sim \quad \bar X + \Sigma_{xy} \Sigma_{y}^{-1} (y-\bar Y).
+\]
+see {\small \url{http://www.stats.ox.ac.uk/~doucet/doucet_simulationconditionalgaussian.pdf}}.
+This can be substantially more efficient than factorising $\Sigma_{x \mid y}$.
+For example, this result can be used to show that 
+\[
+t \mapsto W_t + \frac{t}{T}(v - W_T)
+\]
+creates a Wiener bridge $W | W_T = v$ as pathwise transformation of a Wiener process $W = (W_t)_{t \in [0, T]}$.
+
+
+\section{Linear model}
+A linear model\footnote{Careful: Here $B$ corresponds to the known (design-) matrix, which is often called $X$ in other texts. } from this perspective can be written
+\[
+Y = B X + \eta, \eta \sim N(0, \sigma^2I).
+\]
+ If we put a Gaussian prior on $X$, $X \sim N(\mu_{x}, \Sigma_{x})$, $\Sigma_{x} = L_{x} L_{x}'$, then we are in the block model situation with $(X,Y)$ Gaussian with 
+\[
+\mu_y = B\mu_x
+\]
+\[
+\Sigma_{y} = B\Sigma_{x}B'+\sigma^2I,\;  \Sigma_{xy} = \Sigma_{x}B',\;  \Sigma_{yx} = B\Sigma_{x}.
+\]
+Then $\Sigma = AA'$ with
+\[
+ A = \begin{bmatrix}
+L_{x} & 0\\
+B L_{x} & \sigma I
+\end{bmatrix}.
+\]
+
+More generally, if
+\[
+Y = BX + \eta, X \sim N(\mu_X, \Sigma_X), \eta \sim N(\mu_\eta, \Sigma_\eta)
+\]
+we get the following characterizations of the conditional distribution (inversion) given $Y=y$: 
+\[
+\begin{array}{l}
+{\mu}_{X \mid Y}={\Sigma}_{X \mid Y}\left({B}^{\prime} {\Sigma}_{\eta}^{-1}\left(y-{\mu_\eta}\right)+{\Sigma}_{X}^{-1} {\mu}_{X}\right)={\mu}_{X}+{\Sigma}_{X} {B}^{\prime} {\Sigma}_{Y}^{-1}\left(y-{\mu_\eta}-{B} {\mu}_{X}\right) \\
+{\Sigma}_{X \mid Y}=\left({\Sigma}_{X}^{-1}+{B}^{\prime} {\Sigma}_{\eta}^{-1} {B}\right)^{-1}={\Sigma}_{X}-{\Sigma}_{X} {B}^{\prime} {\Sigma}_{Y}^{-1} {B} {\Sigma}_{X}
+\end{array}
+\]
+where
+\[
+\begin{aligned}
+{\mu}_{Y} &={B} {\mu}_{X}+{\mu_\eta} \\
+{\Sigma}_{Y} &={\Sigma}_{\eta}+{B} {\Sigma}_{X} {B}^{\prime}
+\end{aligned}
+\]
+Here $K = {\Sigma}_{X} {B}^{\prime} /{\Sigma}_{Y}$ is the Kalman gain
+\[
+{\mu}_{X \mid Y} ={\mu}_{X}+K\left(y-{\mu_\eta}-{B} {\mu}_{X}\right)
+\]
+\[
+ {\Sigma}_{X \mid Y} =\left(I-K {B} \right){\Sigma}_{X}
+=  \left( {I} - {K}  {B} \right) \Sigma_X\left( {I} - {K}  {B} \right)'+ {K}  \Sigma_{\eta}  {K} '.
+\]
+The expression on the right hand side is called the Joseph form, which is more robust in errors in $K$.
+
+The marginal likelihood is with the residual
+\[
+\tilde y = y - B \mu_{X\mid Y}
+\]
+given by
+\[
+-\frac12\left(\tilde y' \Sigma^{-1}_Y \tilde y + \log| \Sigma_Y| + d_y \log 2\pi \right).
+\]
+
+The information filter updates the precision matrix instead:
+\[
+\Gamma_{X \mid Y} = \Gamma_X + B'\Gamma_\eta B
+\]
+\[
+\Gamma_{X \mid Y}\mu_{X \mid Y} = \Gamma_X \mu_X + B'\Gamma_\eta ( y - \mu_\eta) 
+\]
+
+The square root information filter updates the square root of the precision matrix. With  $\Gamma = A_1A_1' + B'A_2 A_2' B$, where $A_1A_2 = \Gamma_1$, $A_2A_2' = \Gamma_\eta$,
+\[
+\begin{bmatrix} A_1 \; B'A_2\end{bmatrix} = \bar L Q
+\]
+gives the updated root $\bar L\bar L' = \Gamma $.
+
+
+%http://www.it.uu.se/edu/course/homepage/apml/exercises/Session2.pdf
+
+\section{Fusion}
+
+If $X \sim N(\mu_x, \Sigma_x) = N_{can}(F_x, \Gamma_x)$ where $F_x = \Gamma_x \mu_x$ and $\Gamma_x = (\Sigma_x)^{-1}$  and $Y \sim N(\mu_y, \Sigma_y) = N_{can}(F_y, \Gamma_y)$ (both positive definite and of \emph{same dimension}), then the product of the densities $\xi \mapsto \phi_x(\xi)\phi_y(\xi)$ is proportional to the density of
+\[
+N_{can}(F_x + F_y, \Gamma_x + \Gamma_y) = N((\Gamma_x + \Gamma_y)\backslash(\Gamma_x\mu_x + \Gamma_y\mu_y), (\Gamma_x + \Gamma_y)^{-1})\]
+The formula generalizes to products $\phi_x\phi_y\phi_z$...
+
+With $Z_x$ and $Z_y$ independent,
+\[
+(\Gamma_x + \Gamma_y)\backslash(\bar L_x (\bar L_x'\mu_x + Z_x) + \bar L_y (\bar L_y'\mu_y + Z_x)) 
+ \sim \phi_x\phi_y
+\]
+\url{https://www.diva-portal.org/smash/get/diva2:1276178/FULLTEXT01.pdf}
+\appendix
+
+\section{Woodbury}
+
+\[
+\left(A+UCV\right)^{{-1}}=A^{{-1}}-A^{{-1}}U\left(C^{{-1}}+VA^{{-1}}U\right)^{{-1}}VA^{{-1}},
+\]
+
+\[
+\left(A-UCV\right)^{{-1}}=A^{{-1}}+A^{{-1}}U\left(C^{{-1}}-VA^{{-1}}U\right)^{{-1}}VA^{{-1}},
+\]
+
+
+
+\section{Completing the square}
+\[
+-\frac12 x'\Gamma x + x' F - c = -\frac12 (x-\mu)' \Gamma (x-\mu) - k
+\]
+with
+\[
+\mu=  \Gamma^{-1} F, \quad k = c - F' \Gamma^{-1} F/2
+\]
+and
+\[
+\int \exp\left(-\frac12 (x-\mu)' \Gamma (x-\mu)\right) d x = (2\pi)^{d/2} |\Gamma|^{1/2} 
+\]
+\end{document}
+
+
+
