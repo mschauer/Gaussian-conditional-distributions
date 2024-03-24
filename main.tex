@@ -183,7 +183,24 @@ If $\Gamma$ is sparse, then
   \Gamma_{xy}\Gamma_y^{-1} \Gamma_{yx} 
 \]
 can be computed from having the inverse available only for neighbouring coordinates of $x$.
+\section{Expectation}
+If $X \sim N(\mu, \Sigma)$, then for a log-quadratic function $h(x) = \exp(x'F - \frac12 x' \Gamma x)$,
+then
+\[
+\E[ h(X)] = |\Sigma|^{-\frac12}|\Sigma^{-1}+\Gamma|^{-\frac12}\exp\left(-\frac12 \mu'\Sigma^{-1}\mu + \frac12(\Sigma^{-1}\mu + F)'(\Sigma^{-1}+\Gamma)(\Sigma^{-1}\mu + F)\right)
+\]
 
+\begin{proof}
+\[
+ (2\pi)^{-\frac{d}{2}}|\Sigma|^{-\frac12}\exp(-\frac12 \mu'\Sigma^{-1}\mu) \int\exp(x'\Sigma^{-1}\mu -\frac12  x'\Sigma^{-1} x + x'F - \frac12 x' \Gamma x) \dd x
+\]
+\[
+ (2\pi)^{-\frac{d}{2}}|\Sigma|^{-\frac12}\exp(-\frac12 \mu'\Sigma^{-1}\mu) \int\exp(x'(\Sigma^{-1}\mu + F)-\frac12  x'(\Sigma^{-1} + \Gamma)x  ) \dd x
+\]
+\[
+|\Sigma|^{-\frac12}|\Sigma^{-1}+\Gamma|^{-\frac12}\exp(-\frac12 \mu'\Sigma^{-1}\mu + \frac12 (\Sigma^{-1}\mu + F)'(\Sigma^{-1}+\Gamma)^{-1}(\Sigma^{-1}\mu + F))
+\]
+\end{proof}
 
 \section{Marginal likelihood}
 In the setting of the positive definite block model,
@@ -217,6 +234,34 @@ with $w_y = \exp\left(-\frac12 \mu_x'\Gamma_x \mu_x-\frac12(y - \mu_y)'\Gamma_y(
 = (2\pi)^{\frac{d_x - d}2}|\Gamma|^{\frac12} |\Gamma_x|^{-\frac12}   \exp\left(\frac12 \mu_{x\mid y}'\Gamma_x \mu_{x\mid y}
 -\frac12[ - \mu_x, y - \mu_y]' \Sigma^{-1}[ - \mu_x, y - \mu_y]
 \right)  
+\]
+\end{proof}
+
+
+\section{Marginal likelihood integrating out the pull back}
+
+Also if $y - B[x,z] \mid x, z \sim N_c(F_y, \Gamma_y)$ where $z \sim N(0,1)$, then with $F = B'F_y$, $\Gamma = B'\Gamma B$,
+\[
+(2\pi)^{-\frac{d_y + d_z}2}|\Gamma_y|^{\frac12} \int \exp\left(-\frac12 (\mu_y' - [x  , z ]'B') \Gamma_y (\mu_y - B [x, z])\right) \exp\left(-\frac12 z'z\right) d z
+\]
+\[
+=(2\pi)^{-\frac{d_y}2}|\Gamma_y|^{\frac12}|\Gamma_z +I|^{-\frac12} \exp\left(\frac12 \bar F'(\Gamma_z)^{-1} \bar F-\frac12 F_y' \Gamma_y^{-1} F_y + x'F_x -\frac12 x' \Gamma_x x \right)
+\]
+\begin{proof}
+\[
+(2\pi)^{-\frac{d_y + d_z}2}|\Gamma_y|^{\frac12} \int \exp\left(-\frac12 (\mu_y' - [x  , z ]'B') \Gamma_y (\mu_y - B [x, z])\right) \exp\left(-\frac12 z'z\right) d z
+\]
+\[
+=(2\pi)^{-\frac{d_y+ d_z}2}|\Gamma_y|^{\frac12} \exp\left( -\frac12 \mu_y' \Gamma_y \mu_y \right) \int \exp\left([x,z]'B' F_y -\frac12[x  , z ]'B' \Gamma_y B [x, z]-\frac12 z'z\right) d z
+\]
+\[
+=(2\pi)^{-\frac{d_y+ d_z}2}|\Gamma_y|^{\frac12} \exp\left( -\frac12 \mu_y' \Gamma_y \mu_y \right)\int \exp\left([x,z]' F -\frac12[x  , z ]' \Gamma [x, z]-\frac12 z'z\right) d z
+\]
+\[
+=(2\pi)^{-\frac{d_y+ d_z}2}|\Gamma_y|^{\frac12} \exp\left(-\frac12 \mu_y' \Gamma_y \mu_y + x'F_x -\frac12 x' \Gamma_x x \right)\int \exp\left(z' \underbrace{(F_z -  \Gamma_{zx} x)}_{\bar F} -\frac12 z' (\Gamma_z + I) z \right) d z
+\]
+\[
+=(2\pi)^{-\frac{d_y}2}|\Gamma_y|^{\frac12}|\Gamma_z +I|^{-\frac12} \exp\left(\frac12 \bar F'(\Gamma_z)^{-1} \bar F-\frac12 F_y' \Gamma_y^{-1} F_y + x'F_x -\frac12 x' \Gamma_x x \right)
 \]
 \end{proof}
 \section{Inversion}
