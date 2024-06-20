@@ -19,17 +19,17 @@
 \newcommand{\MkCal}[1]{\expandafter\def\csname c#1\endcsname{\mathcal{#1}}}
 \newcommand{\MkBB}[1]{\expandafter\def\csname #1#1\endcsname{\mathbb{#1}}}
 
-\@for\i:=\lstAZ\do{%
-	\expandafter\MkScr \i  %  
-	\expandafter\MkFrak \i  %
-	\expandafter\MkUp \i %
-	\expandafter\MkCal \i  %
+\@for\@tempa :=\lstAZ\do{%
+	\expandafter\MkScr \@tempa  %  
+	\expandafter\MkFrak \@tempa %
+	\expandafter\MkUp \@tempa   %
+	\expandafter\MkCal \@tempa  %
 		  }    
-\@for\i:=\lstaz\do{%
-	\expandafter\MkUp \i   }    
+\@for\@tempa :=\lstaz\do{%
+	\expandafter\MkUp \@tempa }    
 	
-\@for\i:=\lstAZBB\do{%
-	\expandafter\MkBB \i     }
+\@for\@tempa :=\lstAZBB\do{%
+	\expandafter\MkBB \@tempa }
 	    
 \makeatother
 
